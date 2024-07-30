@@ -1,98 +1,159 @@
-import yfinance as yf
-import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
-
-matplotlib.use('Qt5Agg')
-
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT as NavigationToolbar
 import numpy as np
 from sklearn.metrics import r2_score
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QComboBox, QPushButton, QHBoxLayout, QLabel, QTabWidget
-from PyQt5.QtGui import QColor, QPalette
+from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QComboBox, QPushButton, QHBoxLayout, QLabel, QTabWidget, QGroupBox, QFormLayout, QLineEdit
+from PyQt5.QtGui import QColor, QPalette, QFont
 from PyQt5.QtCore import Qt
 from plotting import download_data, calculate_trend, plot_stock_data
 
+matplotlib.use('Qt5Agg')
+
 class MyWindow(QMainWindow):
     def __init__(self):
-        """Initialize the main window and its widgets"""
         super(MyWindow, self).__init__()
         self.initUI()
-    
+
     def initUI(self):
-        """Set up the user interface"""
         self.setWindowTitle("Pala Capital")
         self.setGeometry(0, 0, 1920, 1080)
+        self.setWindowIcon(QtGui.QIcon("icon-copy.png")) 
 
-        # Set the application icon
-        self.setWindowIcon(QtGui.QIcon("icon-copy.png"))  # Update with the correct path to your emoji file
-
-        # Set the background color
-        self.setStyleSheet("background-color: #f0f8ff;")  # Light relaxing color for the main window
-
-        # Central widget to hold all other widgets
+        # Central Widget
         self.central_widget = QWidget(self)
         self.setCentralWidget(self.central_widget)
-        
-        # Main layout to split the window into left and right sections
         main_layout = QHBoxLayout(self.central_widget)
-        
-        # Left layout for buttons and controls
+
+        # --- Left Panel ---
+        left_panel = QGroupBox("Stock Analysis Tools") 
+        left_panel.setStyleSheet("background-color: #c0c0c0;")  
         left_layout = QVBoxLayout()
-        left_widget = QWidget()
-        left_widget.setLayout(left_layout)
-        left_widget.setStyleSheet("background-color: #d1e7dd;")  # Different color for the menu background
-        main_layout.addWidget(left_widget, 1)  # Adjust the stretch factor to control the size
-        
-        # Right layout for charts
-        right_layout = QVBoxLayout()
-        main_layout.addLayout(right_layout, 3)  # Adjust the stretch factor to control the size
-        
-        # Add a label for stock prediction
-        self.label = QtWidgets.QLabel("Stock Prediction")
-        left_layout.addWidget(self.label)
-        
-        # Button to trigger plot generation
-        self.b1 = QtWidgets.QPushButton("Click Me")
-        self.b1.clicked.connect(self.button_clicked)
-        left_layout.addWidget(self.b1)
-        
-        # ComboBox for selecting stock symbols
+        left_panel.setLayout(left_layout)
+        main_layout.addWidget(left_panel, 1)
+
+        # --- Stock Prediction Section ---
+        prediction_section = QGroupBox("Stock Prediction")
+        prediction_layout = QFormLayout()
+        prediction_section.setLayout(prediction_layout)
+        left_layout.addWidget(prediction_section)
+
+        # Stock Selection
         self.comboBox = QComboBox(self)
-        self.comboBox.addItems(["EREGL.IS", "SASA.IS", "TKFEN.IS", "SISE.IS", "ENKAI.IS", "DOHOL.IS", "THYAO.IS", "EKGYO.IS", "PETKM.IS"])
-        left_layout.addWidget(QLabel("Stock Prediction"))
-        left_layout.addWidget(self.comboBox)
-        
-        # Buttons for selecting models
-        self.model1_button = QPushButton("Model 1")
-        self.model2_button = QPushButton("Model 2")
+        stock_list = ["EREGL.IS", "SASA.IS", "TKFEN.IS", "SISE.IS", "ENKAI.IS",
+                      "DOHOL.IS", "THYAO.IS", "EKGYO.IS", "PETKM.IS", "VESTL.IS", 
+                      "PRKME.IS", "ALARK.IS"]
+        self.comboBox.addItems(stock_list)
+        prediction_layout.addRow("Select Stock:", self.comboBox)
+
+        # Model Selection
+        model_layout = QHBoxLayout()
+        self.model1_button = QPushButton("Polynomial Regression")
+        self.model2_button = QPushButton("Another Model") 
         self.model1_button.setCheckable(True)
         self.model2_button.setCheckable(True)
-        
         self.model1_button.clicked.connect(self.on_button_clicked)
         self.model2_button.clicked.connect(self.on_button_clicked)
-        
-        # Layout to hold model selection buttons
-        button_layout = QHBoxLayout()
-        button_layout.addWidget(self.model1_button)
-        button_layout.addWidget(self.model2_button)
-        
-        left_layout.addWidget(QLabel("Model:"))
-        left_layout.addLayout(button_layout)
-        
-        # Button to show current selection
-        self.show_selection_button = QPushButton("Seçimleri Göster")
-        self.show_selection_button.clicked.connect(self.show_selection)
-        left_layout.addWidget(self.show_selection_button)
-        
-        # Tab widget to hold multiple charts
+        model_layout.addWidget(self.model1_button)
+        model_layout.addWidget(self.model2_button)
+        prediction_layout.addRow("Select Model:", model_layout)
+
+        # --- Add "Run Analysis" button INSIDE the prediction group box ---
+        self.run_analysis_button = QPushButton("Run Analysis")
+        self.run_analysis_button.clicked.connect(self.plot_graph)
+        self.run_analysis_button.setStyleSheet("background-color: #4CAF50; color: white")  
+        prediction_layout.addRow(self.run_analysis_button)  # Add to prediction_layout
+
+        # --- Other Tools (Placeholder) ---
+        other_tools_section = QGroupBox("More Tools (Coming Soon)")
+        other_tools_layout = QVBoxLayout()
+        other_tools_section.setLayout(other_tools_layout)
+        left_layout.addWidget(other_tools_section)
+
+        # --- Data Section ---
+        data_section = QGroupBox("Data")
+        data_layout = QFormLayout()  # Use QFormLayout for better alignment
+        data_section.setLayout(data_layout)
+        left_layout.addWidget(data_section)
+
+        # Data Source Selection
+        self.data_source_combo = QComboBox(self)
+        self.data_source_combo.addItems(["Local Files", "SQL Database"])
+        self.data_source_combo.currentIndexChanged.connect(self.update_data_source_visibility)
+        data_layout.addRow("Data Source:", self.data_source_combo)
+
+        # Update Button
+        self.update_data_button = QPushButton("Update")
+        self.update_data_button.clicked.connect(self.update_data)  # Connect to a function
+        data_layout.addRow(self.update_data_button)
+
+        # --- Add spacing before SQL details ---
+        data_layout.addRow(QLabel(""))  # Add an empty label for spacing
+
+        # --- SQL Connection Details (Initially Hidden) ---
+        self.sql_details_group = QGroupBox("SQL Connection Details")
+        self.sql_details_layout = QFormLayout()
+        self.sql_details_group.setLayout(self.sql_details_layout)
+        data_layout.addRow(self.sql_details_group)
+        self.sql_details_group.hide()  # Hide initially
+
+        # TODO: CONNECT THE SQL, MAKE NECESSARY CHANGES IN PLOTTING.PY
+        # SQL Connection Fields
+        self.host_edit = QLineEdit()
+        self.sql_details_layout.addRow("Host:", self.host_edit)
+        self.database_edit = QLineEdit()
+        self.sql_details_layout.addRow("Database:", self.database_edit)
+        self.username_edit = QLineEdit()
+        self.sql_details_layout.addRow("Username:", self.username_edit)
+        self.password_edit = QLineEdit()
+        self.password_edit.setEchoMode(QLineEdit.Password) # Hide password input
+        self.sql_details_layout.addRow("Password:", self.password_edit)
+
+        # --- Add spacing between widgets ---
+        left_layout.addSpacing(20)
+        prediction_layout.setVerticalSpacing(15)
+
+        # --- Styling ---
+        self.setStyleSheet("background-color: lightgrey;") 
+        font = QFont()
+        font.setPointSize(12) 
+        self.setFont(font)
+
+        # --- Right Panel (Chart Area) ---
+        right_widget = QWidget() 
+        right_layout = QVBoxLayout()
+        right_widget.setLayout(right_layout)  
+
+        main_layout.addWidget(right_widget, 3)  
         self.tab_widget = QTabWidget()
         self.tab_widget.setTabsClosable(True)
         self.tab_widget.tabCloseRequested.connect(self.close_tab)
         right_layout.addWidget(self.tab_widget)
-    
+
+    def update_data_source_visibility(self):
+        """Show/hide SQL details based on selected data source."""
+        if self.data_source_combo.currentText() == "SQL Database":
+            self.sql_details_group.show()
+        else:
+            self.sql_details_group.hide()
+
+    def update_data(self):
+        """Handle data update based on selected source."""
+        source = self.data_source_combo.currentText()
+        if source == "Local Files":
+            print("Updating from local files...")
+            # Add your logic for updating from local files
+        elif source == "SQL Database":
+            print("Updating from SQL database...")
+            # Add your logic for updating from the database
+            host = self.host_edit.text()
+            database = self.database_edit.text()
+            username = self.username_edit.text()
+            password = self.password_edit.text()
+            # Use these variables to connect to the database
+
     def button_clicked(self):
         """Handle button click event to generate the plot"""
         self.label.setText("Button clicked")
