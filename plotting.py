@@ -7,6 +7,18 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import os
 import datetime
 
+# TODO drive api
+
+def download_dollar_data():
+    """Downloads stock data, updating it if necessary."""
+    last_update = get_last_update_date("TRY=X")
+    if last_update is None or last_update < datetime.date.today():
+        update_stock_data("TRY=X")
+    data = pd.read_csv(get_data_path("TRY=X"), index_col=0, parse_dates=True)
+    data.rename(columns={"Adj Close": "Fiyat"}, inplace=True)  # Rename column
+
+    return data
+
 def get_data_path(stock_symbol, extension="csv"):
     """Returns the path to the data file (CSV or TXT) for the given stock symbol."""
     data_folder = "stock_data"
@@ -42,13 +54,14 @@ def download_data(selected_stock):
         update_stock_data(selected_stock)
     data = pd.read_csv(get_data_path(selected_stock), index_col=0, parse_dates=True)
     data.rename(columns={"Adj Close": "Fiyat"}, inplace=True)  # Rename column
+
     return data
 
 def calculate_trend(data):
     """Calculate the polynomial trend line for the stock data"""
-    data.rename(columns={"Adj Close": "Fiyat"}, inplace=True)
-    x = np.arange(len(data["Fiyat"]))
-    y = data["Fiyat"]
+    print(data.columns)
+    x = np.arange(len(data["Adj Close"]))
+    y = data["Adj Close"]
     katsayı = np.polyfit(x, y, 2)
     polfonk = np.poly1d(katsayı)
     trend = polfonk(x)
@@ -56,6 +69,22 @@ def calculate_trend(data):
     hata = y - trend
     ss = np.std(hata)
     return x, y, trend, r2, ss
+
+
+def calculate_dollar_trend(data, dollar_data):
+    """Calculate the polynomial trend line for the stock data"""
+    print(dollar_data.columns)
+    x = np.arange(len(data["Adj Close"]))
+    dollar_data = dollar_data.reindex(data.index, method='ffill')
+    y = data["Adj Close"]/dollar_data["Adj Close"]
+    katsayı = np.polyfit(x, y, 2)
+    polfonk = np.poly1d(katsayı)
+    trend = polfonk(x)
+    r2 = r2_score(y, trend)
+    hata = y - trend
+    ss = np.std(hata)
+    return x, y, trend, r2, ss
+
 
 def plot_stock_data(selected_stock, selected_model, data, trend, r2, ss):
     """Generate the stock price plot"""
@@ -73,3 +102,5 @@ def plot_stock_data(selected_stock, selected_model, data, trend, r2, ss):
     
     canvas.draw()
     return canvas, figure
+
+download_dollar_data()

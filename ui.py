@@ -3,12 +3,13 @@ import matplotlib
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, NavigationToolbar2QT as NavigationToolbar
 import numpy as np
+import pandas as pd
 from sklearn.metrics import r2_score
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QComboBox, QPushButton, QHBoxLayout, QLabel, QTabWidget, QGroupBox, QFormLayout, QLineEdit
 from PyQt5.QtGui import QColor, QPalette, QFont
 from PyQt5.QtCore import Qt
-from plotting import download_data, calculate_trend, plot_stock_data
+from plotting import download_data, calculate_trend, download_dollar_data, calculate_dollar_trend
 
 matplotlib.use('Qt5Agg')
 
@@ -69,6 +70,12 @@ class MyWindow(QMainWindow):
         # --- Other Tools (Placeholder) ---
         other_tools_section = QGroupBox("More Tools (Coming Soon)")
         other_tools_layout = QVBoxLayout()
+
+        self.model3_button = QPushButton("Dollar Button") 
+        self.model3_button.setCheckable(True)
+        self.model3_button.clicked.connect(self.on_button_clicked)
+        other_tools_layout.addWidget(self.model3_button)
+
         other_tools_section.setLayout(other_tools_layout)
         left_layout.addWidget(other_tools_section)
 
@@ -168,6 +175,8 @@ class MyWindow(QMainWindow):
             self.model2_button.setChecked(False)
         elif sender == self.model2_button:
             self.model1_button.setChecked(False)
+        elif sender == self.model3_button:
+            self.model1_button.setChecked(False)
         self.update_button_colors()
         
     def update_button_colors(self):
@@ -203,7 +212,14 @@ class MyWindow(QMainWindow):
         selected_stock, selected_model = self.show_selection()
         
         data = download_data(selected_stock)
-        x, y, trend, r2, ss = calculate_trend(data)
+        
+        if self.model3_button.isChecked():
+            dollar_data = download_dollar_data()
+            x, y, trend, r2, ss = calculate_dollar_trend(data, dollar_data)
+        else:
+            x, y, trend, r2, ss = calculate_trend(data)
+
+        
         
         # Create a new figure and canvas for the plot
         figure = Figure()
