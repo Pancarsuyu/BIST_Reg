@@ -28,12 +28,21 @@ def update_stock_data(stock_symbol):
     """Downloads and updates the stock data from Yahoo Finance."""
     data = yf.download(stock_symbol, start="2020-07-27", interval="1d")["Adj Close"]
     data = pd.DataFrame(data)
+    dolar = yf.download("TRY=X", start="2020-07-27", interval="1d")["Close"]
+    dolar = pd.DataFrame(dolar)
+    dolar = dolar.reindex(data.index).ffill().bfill()
+    data_path_dolar = get_data_path(dolar)
     data_path = get_data_path(stock_symbol)  # CSV path
+    update_file_path_dolar = get_data_path(dolar, extension="txt")
     update_file_path = get_data_path(stock_symbol, extension="txt")  # TXT path
 
     data.to_csv(data_path, header=True, index=True)  # Save CSV data
     with open(update_file_path, 'w') as f:
         f.write(str(datetime.date.today()))  # Write update date to .txt
+
+    data.to_csv(data_path_dolar, header=True, index=True)
+    with open(update_file_path_dolar, "w") as f:
+        f.write(str(datetime.date.today()))
 
 def download_data(selected_stock):
     """Downloads stock data, updating it if necessary."""
@@ -42,12 +51,29 @@ def download_data(selected_stock):
         update_stock_data(selected_stock)
     data = pd.read_csv(get_data_path(selected_stock), index_col=0, parse_dates=True)
     data.rename(columns={"Adj Close": "Fiyat"}, inplace=True)  # Rename column
-    return data
+    dolar = yf.download("TRY=X", start="2020-07-27", interval="1d")["Close"]
+    dolar = pd.DataFrame(dolar)
+    dolar = dolar.reindex(data.index).ffill().bfill()
+    return data, dolar
 
-def calculate_trend(data):
+def calculate_trend(data,dolar,type):
     """Calculate the polynomial trend line for the stock data"""
     data.rename(columns={"Adj Close": "Fiyat"}, inplace=True)
+    if type == 2: data["Fiyat"] = data["Fiyat"]/dolar["Close"]
     x = np.arange(len(data["Fiyat"]))
+    y = data["Fiyat"]
+    katsayı = np.polyfit(x, y, 2)
+    polfonk = np.poly1d(katsayı)
+    trend = polfonk(x)
+    r2 = r2_score(y, trend)
+    hata = y - trend
+    ss = np.std(hata)
+    return x, y, trend, r2, ss
+
+def calculate_trend_dolar(data,dolar):
+    data.rename(columns={"Adj Close": "Fiyat"}, inplace=True)
+    data["Fiyat"] = data["Fiyat"]/dolar["Close"]
+    x= np.arange(len(data["Fiyat"]))
     y = data["Fiyat"]
     katsayı = np.polyfit(x, y, 2)
     polfonk = np.poly1d(katsayı)

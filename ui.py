@@ -8,7 +8,7 @@ from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QComboBox, QPushButton, QHBoxLayout, QLabel, QTabWidget, QGroupBox, QFormLayout, QLineEdit
 from PyQt5.QtGui import QColor, QPalette, QFont
 from PyQt5.QtCore import Qt
-from plotting import download_data, calculate_trend, plot_stock_data
+from plotting import download_data, calculate_trend, plot_stock_data, calculate_trend_dolar
 
 matplotlib.use('Qt5Agg')
 
@@ -44,9 +44,22 @@ class MyWindow(QMainWindow):
         self.comboBox = QComboBox(self)
         stock_list = ["EREGL.IS", "SASA.IS", "TKFEN.IS", "SISE.IS", "ENKAI.IS",
                       "DOHOL.IS", "THYAO.IS", "EKGYO.IS", "PETKM.IS", "VESTL.IS", 
-                      "PRKME.IS", "ALARK.IS"]
+                      "PRKME.IS", "ALARK.IS","KOZAA.IS"]
         self.comboBox.addItems(stock_list)
         prediction_layout.addRow("Select Stock:", self.comboBox)
+
+        #Currency Selection
+        currency_layout = QHBoxLayout()
+        self.try_button = QPushButton("TRY")
+        self.usd_button = QPushButton("USD") 
+        self.try_button.setCheckable(True)
+        self.usd_button.setCheckable(True)
+        self.try_button.clicked.connect(self.on_button_clicked)
+        self.usd_button.clicked.connect(self.on_button_clicked)
+        currency_layout.addWidget(self.try_button)
+        currency_layout.addWidget(self.usd_button)
+        prediction_layout.addRow("Select Currency:", currency_layout)
+
 
         # Model Selection
         model_layout = QHBoxLayout()
@@ -170,6 +183,13 @@ class MyWindow(QMainWindow):
             self.model1_button.setChecked(False)
         self.update_button_colors()
         
+    def currency_button_clicked(self):
+        currency = self.sender()
+        if currency == self.try_button:
+            self.usd_button.setChecked(False)
+        elif currency == self.usd_button:
+            self.try_button.setChecked(False)
+
     def update_button_colors(self):
         """Update the colors of the model selection buttons based on selection"""
         selected_color = QColor(0, 255, 0)
@@ -203,7 +223,9 @@ class MyWindow(QMainWindow):
         selected_stock, selected_model = self.show_selection()
         
         data = download_data(selected_stock)
-        x, y, trend, r2, ss = calculate_trend(data)
+        dolar = download_data(dolar)
+        type = 1 if self.try_button.isChecked() else 2
+        x, y, trend, r2, ss = calculate_trend(data,dolar,type)
         
         # Create a new figure and canvas for the plot
         figure = Figure()
