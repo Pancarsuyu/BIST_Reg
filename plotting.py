@@ -15,7 +15,6 @@ def download_dollar_data():
     if last_update is None or last_update < datetime.date.today():
         update_stock_data("TRY=X")
     data = pd.read_csv(get_data_path("TRY=X"), index_col=0, parse_dates=True)
-    data.rename(columns={"Adj Close": "Fiyat"}, inplace=True)  # Rename column
 
     return data
 
@@ -53,7 +52,6 @@ def download_data(selected_stock):
     if last_update is None or last_update < datetime.date.today():
         update_stock_data(selected_stock)
     data = pd.read_csv(get_data_path(selected_stock), index_col=0, parse_dates=True)
-    data.rename(columns={"Adj Close": "Fiyat"}, inplace=True)  # Rename column
 
     return data
 
@@ -92,7 +90,7 @@ def plot_stock_data(selected_stock, selected_model, data, trend, r2, ss):
     canvas = FigureCanvas(figure)
     ax = figure.add_subplot(111)
     
-    ax.plot(data.index, data["Fiyat"], "b.", label="Hisse")
+    ax.plot(data.index, data["Adj Close"], "b.", label="Hisse")
     ax.plot(data.index, trend, "r-", label="Trend")
     ax.fill_between(data.index, trend - ss, trend + ss, color="navy", alpha=0.3, label="±1 Standart Sapma")
     ax.fill_between(data.index, trend - 2 * ss, trend + 2 * ss, color="darkred", alpha=0.3, label="±2 Standart Sapma")
